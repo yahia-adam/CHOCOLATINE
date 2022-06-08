@@ -1,0 +1,86 @@
+name: Chocolatine
+
+on:
+  pull_request:
+    branches-ignore:
+    - 'ga-ignore-'
+  push:
+    branches-ignore:
+    - 'ga-ignore-'
+
+env:
+    EXECUTABLES: "antman/antman,giantman/giantman"
+    MIRROR_URL: git@github.com:EpitechPromo2026/B-DOP-200-PAR-2-1-chocolatine-adam.yahia-abdchafee.git
+
+jobs:
+  check_repository_cleanliness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: check_repository_clean
+        run: |
+          unwanted=($(find . \( -name '*.o' -o -name '*.a' -o \
+          -name '*.so' -o -name '*gcno' -o -name '*.gcda' -o -name '#*#' \
+          -o -name '*~' -o -iname "*pain_au_chocolat*" -o -path *tmp/* \)))
+          for i in ${unwanted[@]}; do
+            echo "::error file=$i,line=1,endLine=1,title=unnecessary file::$i"
+          done
+          if [[ -n $unwanted ]]
+          then
+            exit 1
+          else
+            echo all files ok
+          fi
+
+  check_program_compilation:
+    needs: check_repository_cleanliness
+    runs-on: ubuntu-latest
+    container:
+        image: epitechcontent/epitest-docker:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: make
+        timeout-minutes: 2
+        run: make
+      - name: clean
+        run: make clean
+      - name: check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files:  ${{ env.EXECUTABLES }}
+      - name: File Executable
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: |
+            IFS="," read -a files <<< ${{ env.EXECUTABLES }}
+            for i in "${files[@]}"; do
+                [ -f "${i}" ] && [ -r "${i}" ] && [ -x "${i}" ]
+            done
+
+  run_tests:
+    needs: check_program_compilation
+    runs-on:  ubuntu-latest
+    container:
+      image: epitechcontent/epitest-docker:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: tests
+        timeout-minutes: 2
+        run: make tests_run
+
+  push_to_mirror:
+    needs: run_tests
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: pixta-dev/repository-mirroring-action@v1
+        with:
+          target_repo_url: ${{ env.MIRROR_URL }}
+          ssh_private_key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
