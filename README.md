@@ -12,8 +12,11 @@
 
 <h2>Instalation:</h2>
 
-    git clone git@github.com:Yahia-Abdchafee-ADAM/CHOCOLATINE.git
-    mkdir .github ; mkdir .github/workflows ; mv chocolatine.yml .github/workflows/
+    git clone git@github.com:Yahia-Abdchafee-ADAM/CHOCOLATINE.git chocolatine
+    cd chocolatine
+    mkdir .github 
+    mkdir .github/workflows 
+    mv chocolatine.yml .github/workflows/
     
     
 <h2>Example:</h2>
